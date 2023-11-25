@@ -2,11 +2,13 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
   
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.rl5ffdh.mongodb.net/?retryWrites=true&w=majority`;
   
@@ -50,9 +52,10 @@ async function run() {
         }
       });
       app.post('/survey', async(req, res)=>{
-        const job = req.body;
-        // console.log(job);
-        const result = await surveyCollection.insertOne(job)
+        const surveyData = req.body;
+        surveyData.timestamp = new Date();
+        // console.log(surveyData);
+        const result = await surveyCollection.insertOne(surveyData)
         res.send(result)
         
     })
