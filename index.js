@@ -6,7 +6,12 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(bodyParser.json());
   
@@ -26,6 +31,7 @@ async function run() {
   try {
 
     const surveyCollection = client.db('surveyDB').collection('survey');
+    const userCollection = client.db('surveyDB').collection('users');
 
     app.get('/survey', async(req, res)=>{
         const cursor = surveyCollection.find();
@@ -59,6 +65,43 @@ async function run() {
         res.send(result)
         
     })
+
+
+    //User related api
+    app.post('/users', async(req, res)=>{
+      const userData = req.body;
+      const query = { email: userData.email }
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
+      const result = await userCollection.insertOne(userData)
+      res.send(result)
+  })
+
+  app.get('/users', async (req, res) => {
+    const result = await userCollection.find().toArray();
+    res.send(result);
+  });
+
+  app.patch('/users/admin/:id', async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updatedDoc = {
+      $set: {
+        role: 'admin'
+      }
+    }
+    const result = await userCollection.updateOne(filter, updatedDoc);
+    res.send(result);
+  })
+
+  app.delete('/users/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) }
+    const result = await userCollection.deleteOne(query);
+    res.send(result);
+  })
 
 
 
