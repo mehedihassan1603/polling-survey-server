@@ -145,6 +145,18 @@ async function run() {
     res.send(result);
   });
 
+  app.patch('/users/prouser/:id', async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updatedDoc = {
+      $set: {
+        role: 'Pro-User'
+      }
+    }
+    const result = await userCollection.updateOne(filter, updatedDoc);
+    res.send(result);
+  })
+
   app.patch('/users/admin/:id', async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
@@ -156,6 +168,7 @@ async function run() {
     const result = await userCollection.updateOne(filter, updatedDoc);
     res.send(result);
   })
+
   app.patch('/users/surveyor/:id', async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
@@ -200,6 +213,11 @@ async function run() {
     const result = await paymentCollection.find(query).toArray();
     res.send(result);
   })
+  app.get('/payments', async (req, res) => {
+    // console.log(req.headers)
+    const result = await paymentCollection.find().toArray();
+    res.send(result);
+  });
 
   app.post('/payments', async (req, res) => {
     const payment = req.body;
@@ -207,6 +225,17 @@ async function run() {
 
     console.log('payment info', payment);
     res.send(paymentResult)
+  })
+  app.patch('/payments/:id', async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updatedDoc = {
+      $set: {
+        status: 'Paid'
+      }
+    }
+    const result = await paymentCollection.updateOne(filter, updatedDoc);
+    res.send(result);
   })
 
 
