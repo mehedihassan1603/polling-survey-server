@@ -2,6 +2,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const moment = require('moment');
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -36,6 +37,7 @@ async function run() {
     const surveyCollection = client.db('surveyDB').collection('survey');
     const userCollection = client.db('surveyDB').collection('users');
     const paymentCollection = client.db('surveyDB').collection('payments');
+    const commentCollection = client.db('surveyDB').collection('comments');
 
 
     // jwt related api
@@ -108,6 +110,82 @@ async function run() {
         res.send(result)
         
     })
+      app.post('/comment', async(req, res)=>{
+        const surveyData = req.body;
+        // console.log(surveyData);
+        const result = await commentCollection.insertOne(surveyData)
+        res.send(result)  
+    })
+    app.get('/comment', async(req, res)=>{
+      const cursor = commentCollection.find();
+      // console.log('tok tok token', req.cookies.token)
+      const result = await cursor.toArray();
+      res.send(result);
+      console.log(result)
+    })
+    app.get('/comment/:id', async (req, res) => {
+        try {
+          const id = req.params.id;
+          const query = { _id: new ObjectId(id) };
+          const survey = await commentCollection.findOne(query);
+      
+          if (!survey) {
+            return res.status(404).send('Survey not found');
+          }
+      
+          res.send(survey);
+        } catch (error) {
+          console.error('Error fetching survey by ID:', error);
+          res.status(500).send('Internal Server Error');
+        }
+      });
+
+ 
+
+    app.put('/survey/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+    
+        // Assuming the request body contains the updated vote and comment fields
+        const { updatedSurveyData } = req.body;
+    
+        console.log('Received Data:', updatedSurveyData);
+    
+        const updatedDoc = {
+          $set: {},
+        };
+    
+        if (updatedSurveyData.totalVote !== undefined) {
+          updatedDoc.$set.totalVote = updatedSurveyData.totalVote;
+        }
+        if (updatedSurveyData.comment !== undefined) {
+          updatedDoc.$set.comment = updatedSurveyData.comment;
+        }
+        if (updatedSurveyData.like !== undefined) {
+          updatedDoc.$set.like = updatedSurveyData.like;
+        }
+        if (updatedSurveyData.dislike !== undefined) {
+          updatedDoc.$set.dislike = updatedSurveyData.dislike;
+        }
+    
+        // You can add other fields to update similarly
+    
+        const result = await surveyCollection.updateOne(filter, updatedDoc);
+    
+        if (result.matchedCount === 1) {
+          res.status(200).json({ message: 'Survey data updated successfully' });
+        } else {
+          res.status(404).json({ message: 'Survey not found' });
+        }
+      } catch (error) {
+        console.error('Error updating survey data:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+    
+    
+
 
 
     //User related api
@@ -122,7 +200,7 @@ async function run() {
       const user = await userCollection.findOne(query);
       let admin = false;
       if (user) {
-        admin = user?.role === 'admin';
+        admin = user.role === 'admin';
       }
       res.send({ admin });
     })
@@ -139,7 +217,7 @@ async function run() {
       res.send(result)
   })
 
-  app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+  app.get('/users', async (req, res) => {
     // console.log(req.headers)
     const result = await userCollection.find().toArray();
     res.send(result);
@@ -169,17 +247,31 @@ async function run() {
     res.send(result);
   })
 
-  app.patch('/users/surveyor/:id', async (req, res) => {
-    const id = req.params.id;
-    const filter = { _id: new ObjectId(id) };
-    const updatedDoc = {
-      $set: {
-        role: 'surveyor'
-      }
-    }
-    const result = await userCollection.updateOne(filter, updatedDoc);
-    res.send(result);
-});
+  // app.patch('/users/surveyor/:id', async (req, res) => {
+  //   const id = req.params.id;
+  //   const filter = { _id: new ObjectId(id) };
+  //   const updatedDoc = {
+  //     $set: {
+  //       role: 'surveyor'
+  //     }
+  //   }
+  //   const result = await userCollection.updateOne(filter, updatedDoc);
+  //   res.send(result);
+  // })
+
+  // app.get('/users/surveyor/:email', async (req, res) => {
+  //     const email = req.params.email;
+
+     
+
+  //     const query = { email: email };
+  //     const user = await userCollection.findOne(query);
+  //     let admin = false;
+  //     if (user) {
+  //       admin = user.role === 'surveyor';
+  //     }
+  //     res.send({ admin });
+  //   })
 
   app.delete('/users/:id', async (req, res) => {
     const id = req.params.id;
@@ -213,11 +305,33 @@ async function run() {
     const result = await paymentCollection.find(query).toArray();
     res.send(result);
   })
-  app.get('/payments', async (req, res) => {
-    // console.log(req.headers)
-    const result = await paymentCollection.find().toArray();
-    res.send(result);
-  });
+
+
+
+app.get('/payments', async (req, res) => {
+    try {
+        const payments = await paymentCollection.find().toArray();
+
+        // Format date fields using Moment.js
+        const formattedPayments = payments.map(payment => ({
+            ...payment,
+            paymentDate: moment(payment.paymentDate).format('YYYY-MM-DD HH:mm:ss')
+            // Adjust the format according to your requirements
+        }));
+
+        res.send(formattedPayments);
+    } catch (error) {
+        console.error('Error fetching payments:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+
+  // app.get('/payments', async (req, res) => {
+  //   // console.log(req.headers)
+  //   const result = await paymentCollection.find().toArray();
+  //   res.send(result);
+  // });
 
   app.post('/payments', async (req, res) => {
     const payment = req.body;
