@@ -13,6 +13,9 @@ const port = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:5173',
+    'https://polling-and-survey-9e4a4.web.app',
+    'https://polling-survey-server-two.vercel.app',
+    'https://glamorous-talk.surge.sh'
   ],
   credentials: true
 }));
@@ -354,10 +357,7 @@ app.get('/payments', async (req, res) => {
 
 
 
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
+    
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
